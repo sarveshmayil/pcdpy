@@ -1,0 +1,25 @@
+[project]
+name = "pcdpy"
+version = "0.1.0"
+description = "A python package for reading, writing, and manipulating point clouds from the PCD file format written in Rust."
+readme = "README.md"
+authors = [
+    { name = "Sarvesh Mayilvahanan", email = "39343912+sarveshmayil@users.noreply.github.com" }
+]
+requires-python = ">=3.7"
+dependencies = []
+
+[tool.maturin]
+module-name = "pcdpy._core"
+python-packages = ["pcdpy"]
+python-source = "python"
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[dependency-groups]
+dev = [
+    "maturin>=1.8.0",
+    "ruff>=0.8.4",
+]
