@@ -15,7 +15,7 @@ impl PyPointCloud {
     #[new]
     fn new() -> Self {
         PyPointCloud {
-            pc: PointCloud::new(Vec::new()),
+            pc: PointCloud::new(),
         }
     }
 

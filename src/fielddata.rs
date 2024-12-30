@@ -36,6 +36,41 @@ impl FieldData {
         }
     }
 
+    /// Return number of bytes for each element in this field
+    pub fn get_size(&self) -> usize {
+        match self {
+            FieldData::U1(arr) => 1,
+            FieldData::U2(arr) => 2,
+            FieldData::U4(arr) => 4,
+            FieldData::U8(arr) => 8,
+            FieldData::I1(arr) => 1,
+            FieldData::I2(arr) => 2,
+            FieldData::I4(arr) => 4,
+            FieldData::I8(arr) => 8,
+            FieldData::F4(arr) => 4,
+            FieldData::F8(arr) => 8,
+        }
+    }
+
+    /// Return field type
+    ///   - U = unsigned int
+    ///   - I = signed int
+    ///   - F = float
+    pub fn get_type(&self) -> String {
+        match self {
+            FieldData::U1(arr) => "U".to_owned(),
+            FieldData::U2(arr) => "U".to_owned(),
+            FieldData::U4(arr) => "U".to_owned(),
+            FieldData::U8(arr) => "U".to_owned(),
+            FieldData::I1(arr) => "I".to_owned(),
+            FieldData::I2(arr) => "I".to_owned(),
+            FieldData::I4(arr) => "I".to_owned(),
+            FieldData::I8(arr) => "I".to_owned(),
+            FieldData::F4(arr) => "F".to_owned(),
+            FieldData::F8(arr) => "F".to_owned(),
+        }
+    }
+
     /// Return field as Numpy array as it's native dtype
     // Return a PyAny so we can handle multiple dtypes.
     pub fn to_pyarray<'py>(&self, py: Python<'py>) -> PyResult<&'py PyAny> {
