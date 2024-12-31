@@ -6,20 +6,57 @@ use crates::fielddata::FieldData
 
 mod fielddata;
 
+#[derive(Debug, Clone)]
 enum Encoding {
-    ASCII,
+    Ascii,
     Binary,
     BinaryCompressed,
     BinarySCompressed,
 }
 
 impl Encoding {
-    pub fn to_string(&self) -> String {
+    fn as_str(&self) -> &str {
         match self {
-            Encoding::ASCII => String::from("ascii"),
-            Encoding::Binary => String::from("binary"),
-            Encoding::BinaryCompressed => String::from("binary_compressed"),
-            Encoding::BinarySCompressed => String::from("binaryscompressed"),
+            Encoding::Ascii => "ascii",
+            Encoding::Binary => "binary",
+            Encoding::BinaryCompressed => "binary_compressed",
+            Encoding::BinarySCompressed => "binaryscompressed",
+        }
+    }
+
+    fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "ascii" => Some(Encoding:Ascii),
+            "binary" => Some(Encoding::Binary),
+            "binary_compressed" => Some(Encoding::BinaryCompressed),
+            "binaryscompressed" => Some(Encoding::BinarySCompressed),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Metadata {
+    pub fields: [String],
+    pub dsize: [usize],
+    pub dtype: [char],
+    pub count: [usize],
+    pub width: usize,
+    pub height: usize,
+    pub viewpoint: [f32; 7],
+    pub points: usize,
+    pub encoding: Encoding,
+}
+
+impl Metadata {
+    pub fn new() -> Self {
+        Self {
+            fields: [],
+            dsize: [],
+            dtype: [],
+            count: 0,
+            width: 0,
+            height: 1,
         }
     }
 }
@@ -31,9 +68,9 @@ pub struct PointCloud {
     pub points: usize,
     pub width: usize,
     pub height: usize,
-    pub version: String,
-    pub viewpoint: [f32; 7],
-    pub encoding: Encoding,
+    version: String,
+    viewpoint: [f32; 7],
+    encoding: Encoding,
 }
 
 impl PointCloud {
