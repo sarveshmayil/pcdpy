@@ -73,3 +73,126 @@ impl FieldData {
         }
     }
 }
+
+impl PartialEq for FieldData {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (FieldData::U1(a), FieldData::U1(b)) => a == b,
+            (FieldData::U2(a), FieldData::U2(b)) => a == b,
+            (FieldData::U4(a), FieldData::U4(b)) => a == b,
+            (FieldData::U8(a), FieldData::U8(b)) => a == b,
+            (FieldData::I1(a), FieldData::I1(b)) => a == b,
+            (FieldData::I2(a), FieldData::I2(b)) => a == b,
+            (FieldData::I4(a), FieldData::I4(b)) => a == b,
+            (FieldData::I8(a), FieldData::I8(b)) => a == b,
+            (FieldData::F4(a), FieldData::F4(b)) => a == b,
+            (FieldData::F8(a), FieldData::F8(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_u1 () {
+        let arr = Array1::from(vec![1, 2, 3, 4, 5]);
+        let field = FieldData::U1(arr);
+        assert_eq!(field.len(), 5);
+        assert_eq!(field.get_size(), 1);
+        assert_eq!(field.get_type(), "U");
+        assert_eq!(field.slice(0, 3, 1), FieldData::U1(Array1::from(vec![1, 2, 3])));
+    }
+
+    #[test]
+    fn test_u2 () {
+        let arr = Array1::from(vec![1, 2, 3, 4, 5]);
+        let field = FieldData::U2(arr);
+        assert_eq!(field.len(), 5);
+        assert_eq!(field.get_size(), 2);
+        assert_eq!(field.get_type(), "U");
+        assert_eq!(field.slice(0, 3, 1), FieldData::U2(Array1::from(vec![1, 2, 3])));
+    }
+
+    #[test]
+    fn test_u4 () {
+        let arr = Array1::from(vec![1, 2, 3, 4, 5]);
+        let field = FieldData::U4(arr);
+        assert_eq!(field.len(), 5);
+        assert_eq!(field.get_size(), 4);
+        assert_eq!(field.get_type(), "U");
+        assert_eq!(field.slice(0, 3, 1), FieldData::U4(Array1::from(vec![1, 2, 3])));
+    }
+
+    #[test]
+    fn test_u8 () {
+        let arr = Array1::from(vec![1, 2, 3, 4, 5]);
+        let field = FieldData::U8(arr);
+        assert_eq!(field.len(), 5);
+        assert_eq!(field.get_size(), 8);
+        assert_eq!(field.get_type(), "U");
+        assert_eq!(field.slice(0, 3, 1), FieldData::U8(Array1::from(vec![1, 2, 3])));
+    }
+
+    #[test]
+    fn test_i1 () {
+        let arr = Array1::from(vec![-1, -2, -3, -4, -5]);
+        let field = FieldData::I1(arr);
+        assert_eq!(field.len(), 5);
+        assert_eq!(field.get_size(), 1);
+        assert_eq!(field.get_type(), "I");
+        assert_eq!(field.slice(0, 3, 1), FieldData::I1(Array1::from(vec![-1, -2, -3])));
+    }
+
+    #[test]
+    fn test_i2 () {
+        let arr = Array1::from(vec![-1, -2, -3, -4, -5]);
+        let field = FieldData::I2(arr);
+        assert_eq!(field.len(), 5);
+        assert_eq!(field.get_size(), 2);
+        assert_eq!(field.get_type(), "I");
+        assert_eq!(field.slice(0, 3, 1), FieldData::I2(Array1::from(vec![-1, -2, -3])));
+    }
+
+    #[test]
+    fn test_i4 () {
+        let arr = Array1::from(vec![-1, -2, -3, -4, -5]);
+        let field = FieldData::I4(arr);
+        assert_eq!(field.len(), 5);
+        assert_eq!(field.get_size(), 4);
+        assert_eq!(field.get_type(), "I");
+        assert_eq!(field.slice(0, 3, 1), FieldData::I4(Array1::from(vec![-1, -2, -3])));
+    }
+
+    #[test]
+    fn test_i8 () {
+        let arr = Array1::from(vec![-1, -2, -3, -4, -5]);
+        let field = FieldData::I8(arr);
+        assert_eq!(field.len(), 5);
+        assert_eq!(field.get_size(), 8);
+        assert_eq!(field.get_type(), "I");
+        assert_eq!(field.slice(0, 3, 1), FieldData::I8(Array1::from(vec![-1, -2, -3])));
+    }
+
+    #[test]
+    fn test_f4 () {
+        let arr = Array1::from(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        let field = FieldData::F4(arr);
+        assert_eq!(field.len(), 5);
+        assert_eq!(field.get_size(), 4);
+        assert_eq!(field.get_type(), "F");
+        assert_eq!(field.slice(0, 3, 1), FieldData::F4(Array1::from(vec![1.0, 2.0, 3.0])));
+    }
+
+    #[test]
+    fn test_f8 () {
+        let arr = Array1::from(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        let field = FieldData::F8(arr);
+        assert_eq!(field.len(), 5);
+        assert_eq!(field.get_size(), 8);
+        assert_eq!(field.get_type(), "F");
+        assert_eq!(field.slice(0, 3, 1), FieldData::F8(Array1::from(vec![1.0, 2.0, 3.0])));
+    }
+}
