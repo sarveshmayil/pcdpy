@@ -1,65 +1,7 @@
 use std::collections::HashMap;
 use anyhow::Result;
 use crate::fielddata::FieldData;
-
-
-#[derive(Debug, Clone)]
-enum Encoding {
-    Ascii,
-    Binary,
-    BinaryCompressed,
-    BinarySCompressed,
-}
-
-impl Encoding {
-    fn as_str(&self) -> &str {
-        match self {
-            Encoding::Ascii => "ascii",
-            Encoding::Binary => "binary",
-            Encoding::BinaryCompressed => "binary_compressed",
-            Encoding::BinarySCompressed => "binaryscompressed",
-        }
-    }
-
-    fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "ascii" => Some(Encoding::Ascii),
-            "binary" => Some(Encoding::Binary),
-            "binary_compressed" => Some(Encoding::BinaryCompressed),
-            "binaryscompressed" => Some(Encoding::BinarySCompressed),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Metadata {
-    pub fields: Vec<String>,
-    pub dsize: Vec<usize>,
-    pub dtype: Vec<char>,
-    pub count: Vec<usize>,
-    pub width: usize,
-    pub height: usize,
-    pub viewpoint: [f32; 7],
-    pub points: usize,
-    pub encoding: Encoding,
-}
-
-impl Metadata {
-    pub fn new() -> Self {
-        Self {
-            fields: Vec::new(),
-            dsize: Vec::new(),
-            dtype: Vec::new(),
-            count: Vec::new(),
-            width: 0,
-            height: 1,
-            viewpoint: [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
-            points: 0,
-            encoding: Encoding::BinaryCompressed,
-        }
-    }
-}
+use crate::metadata::Metadata;
 
 
 #[derive(Debug, Clone)]
