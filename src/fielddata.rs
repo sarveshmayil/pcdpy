@@ -1,9 +1,4 @@
 use ndarray::{Array1, s};
-use numpy::PyArray1
-
-use pyo3::prelude::*;
-use pyo3::types::{PyAny, PySlice, PyTuple, PyList};
-use pyo3::exceptions::PyValueError;
 
 #[derive(Debug, Clone)]
 pub enum FieldData {
@@ -39,52 +34,25 @@ impl FieldData {
     /// Return number of bytes for each element in this field
     pub fn get_size(&self) -> usize {
         match self {
-            FieldData::U1(arr) => 1,
-            FieldData::U2(arr) => 2,
-            FieldData::U4(arr) => 4,
-            FieldData::U8(arr) => 8,
-            FieldData::I1(arr) => 1,
-            FieldData::I2(arr) => 2,
-            FieldData::I4(arr) => 4,
-            FieldData::I8(arr) => 8,
-            FieldData::F4(arr) => 4,
-            FieldData::F8(arr) => 8,
+            FieldData::U1(_) => 1,
+            FieldData::U2(_) => 2,
+            FieldData::U4(_) => 4,
+            FieldData::U8(_) => 8,
+            FieldData::I1(_) => 1,
+            FieldData::I2(_) => 2,
+            FieldData::I4(_) => 4,
+            FieldData::I8(_) => 8,
+            FieldData::F4(_) => 4,
+            FieldData::F8(_) => 8,
         }
     }
 
-    /// Return field type
-    ///   - U = unsigned int
-    ///   - I = signed int
-    ///   - F = float
-    pub fn get_type(&self) -> String {
+    /// Return field type: 'U' for unsigned int, 'I' for signed int, 'F' for float
+    pub fn get_type(&self) -> &str {
         match self {
-            FieldData::U1(arr) => "U".to_owned(),
-            FieldData::U2(arr) => "U".to_owned(),
-            FieldData::U4(arr) => "U".to_owned(),
-            FieldData::U8(arr) => "U".to_owned(),
-            FieldData::I1(arr) => "I".to_owned(),
-            FieldData::I2(arr) => "I".to_owned(),
-            FieldData::I4(arr) => "I".to_owned(),
-            FieldData::I8(arr) => "I".to_owned(),
-            FieldData::F4(arr) => "F".to_owned(),
-            FieldData::F8(arr) => "F".to_owned(),
-        }
-    }
-
-    /// Return field as Numpy array as it's native dtype
-    // Return a PyAny so we can handle multiple dtypes.
-    pub fn to_pyarray<'py>(&self, py: Python<'py>) -> PyResult<&'py PyAny> {
-        match self {
-            FieldData::U1(arr) => Ok(arr.clone().into_pyarray(py)),
-            FieldData::U2(arr) => Ok(arr.clone().into_pyarray(py)),
-            FieldData::U4(arr) => Ok(arr.clone().into_pyarray(py)),
-            FieldData::U8(arr) => Ok(arr.clone().into_pyarray(py)),
-            FieldData::I1(arr) => Ok(arr.clone().into_pyarray(py)),
-            FieldData::I2(arr) => Ok(arr.clone().into_pyarray(py)),
-            FieldData::I4(arr) => Ok(arr.clone().into_pyarray(py)),
-            FieldData::I8(arr) => Ok(arr.clone().into_pyarray(py)),
-            FieldData::F4(arr) => Ok(arr.clone().into_pyarray(py)),
-            FieldData::F8(arr) => Ok(arr.clone().into_pyarray(py)),
+            FieldData::U1(_) | FieldData::U2(_) | FieldData::U4(_) | FieldData::U8(_) => "U",
+            FieldData::I1(_) | FieldData::I2(_) | FieldData::I4(_) | FieldData::I8(_) => "I",
+            FieldData::F4(_) | FieldData::F8(_) => "F",
         }
     }
 
