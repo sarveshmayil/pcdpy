@@ -1,10 +1,7 @@
 use std::collections::HashMap;
-
 use anyhow::Result;
+use crate::fielddata::FieldData;
 
-use crates::fielddata::FieldData
-
-mod fielddata;
 
 #[derive(Debug, Clone)]
 enum Encoding {
@@ -26,7 +23,7 @@ impl Encoding {
 
     fn from_str(s: &str) -> Option<Self> {
         match s {
-            "ascii" => Some(Encoding:Ascii),
+            "ascii" => Some(Encoding::Ascii),
             "binary" => Some(Encoding::Binary),
             "binary_compressed" => Some(Encoding::BinaryCompressed),
             "binaryscompressed" => Some(Encoding::BinarySCompressed),
@@ -37,10 +34,10 @@ impl Encoding {
 
 #[derive(Debug, Clone)]
 pub struct Metadata {
-    pub fields: [String],
-    pub dsize: [usize],
-    pub dtype: [char],
-    pub count: [usize],
+    pub fields: Vec<String>,
+    pub dsize: Vec<usize>,
+    pub dtype: Vec<char>,
+    pub count: Vec<usize>,
     pub width: usize,
     pub height: usize,
     pub viewpoint: [f32; 7],
@@ -51,12 +48,15 @@ pub struct Metadata {
 impl Metadata {
     pub fn new() -> Self {
         Self {
-            fields: [],
-            dsize: [],
-            dtype: [],
-            count: 0,
+            fields: Vec::new(),
+            dsize: Vec::new(),
+            dtype: Vec::new(),
+            count: Vec::new(),
             width: 0,
             height: 1,
+            viewpoint: [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            points: 0,
+            encoding: Encoding::BinaryCompressed,
         }
     }
 }
@@ -65,30 +65,20 @@ impl Metadata {
 #[derive(Debug, Clone)]
 pub struct PointCloud {
     pub fields: HashMap<String, FieldData>,
-    pub points: usize,
-    pub width: usize,
-    pub height: usize,
-    version: String,
-    viewpoint: [f32; 7],
-    encoding: Encoding,
+    pub metadata: Metadata,
 }
 
 impl PointCloud {
     pub fn new() -> Self {
         Self {
             fields: HashMap::new(),
-            points: 0,
-            width: 0,
-            height: 1,
-            version: String::from("0.7"),
-            viewpoint: [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
-            encoding: Encoding::BinaryCompressed,
+            metadata: Metadata::new(),
         }
     }
 
     /// Return number of points in PointCloud
     pub fn len(&self) -> usize {
-        self.points
+        self.metadata.points
     }
 
     /// Read data from PCD file and return a new PointCloud
