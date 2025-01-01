@@ -195,3 +195,5 @@ cython_debug/
 # VIM
 .*.sw?
 .sw?
+
+.DS_Store
