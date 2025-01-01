@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 
-use crate::pypointcloud::PyPointCloud;
-
+mod fielddata;
+mod pointcloud;
 mod pypointcloud;
 
 /// A Python module implemented in Rust. The name of this function must match
@@ -9,6 +9,6 @@ mod pypointcloud;
 /// import the module.
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<PyPointCloud>()?;
+    m.add_class::<pypointcloud::PyPointCloud>()?;
     Ok(())
 }
