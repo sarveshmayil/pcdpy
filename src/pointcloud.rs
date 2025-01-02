@@ -18,9 +18,32 @@ impl PointCloud {
         }
     }
 
+    /// Check if PointCloud metadata matches field data
+    pub fn check_metadata(&self) -> Result<bool> {
+        if self.metadata.fields.len() != self.fields.len() {
+            anyhow::bail!("Metadata field count does not match field count");
+        }
+
+        for (field_name, field_data) in &self.fields {
+            if let Some(field_meta) = self.metadata.fields.iter().find(|f| f.name == *field_name) {
+                if field_data.dtype() != field_meta.dtype {
+                    anyhow::bail!("Field '{}' dtype mismatch: expected {:?}, got {:?}", 
+                        field_name, field_meta.dtype, field_data.dtype());
+                }
+                if field_data.len() != self.metadata.npoints {
+                    anyhow::bail!("Field '{}' length mismatch: expected {}, got {}", 
+                        field_name, self.metadata.npoints, field_data.len());
+                }
+            } else {
+                anyhow::bail!("Field '{}' exists in data but not in metadata", field_name);
+            }
+        }
+        Ok(true)
+    }
+
     /// Return number of points in PointCloud
     pub fn len(&self) -> usize {
-        self.metadata.points
+        self.metadata.npoints
     }
 
     /// Read data from PCD file and return a new PointCloud
