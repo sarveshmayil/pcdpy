@@ -11,6 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow = "1.0.95"
 ndarray = "0.16.1"
+num-traits = "0.2.19"
 numpy = "0.23.0"
 # "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
 # "abi3-py39" tells pyo3 (and maturin) to build using the stable ABI with minimum Python version 3.9

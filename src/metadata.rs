@@ -72,6 +72,27 @@ impl Dtype {
         }
     }
 }
+impl std::fmt::Display for Dtype {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+pub trait Data 
+where Self: Copy 
+{
+    const DTYPE: Dtype;
+}
+impl Data for u8 { const DTYPE: Dtype = Dtype::U8; }
+impl Data for u16 { const DTYPE: Dtype = Dtype::U16; }
+impl Data for u32 { const DTYPE: Dtype = Dtype::U32; }
+impl Data for u64 { const DTYPE: Dtype = Dtype::U64; }
+impl Data for i8 { const DTYPE: Dtype = Dtype::I8; }
+impl Data for i16 { const DTYPE: Dtype = Dtype::I16; }
+impl Data for i32 { const DTYPE: Dtype = Dtype::I32; }
+impl Data for i64 { const DTYPE: Dtype = Dtype::I64; }
+impl Data for f32 { const DTYPE: Dtype = Dtype::F32; }
+impl Data for f64 { const DTYPE: Dtype = Dtype::F64; }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Viewpoint {
