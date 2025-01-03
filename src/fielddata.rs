@@ -190,6 +190,23 @@ impl FieldData {
     }
 }
 
+impl std::fmt::Display for FieldData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FieldData::U8(arr) => write!(f, "{:}", arr),
+            FieldData::U16(arr) => write!(f, "{:}", arr),
+            FieldData::U32(arr) => write!(f, "{:}", arr),
+            FieldData::U64(arr) => write!(f, "{:}", arr),
+            FieldData::I8(arr) => write!(f, "{:}", arr),
+            FieldData::I16(arr) => write!(f, "{:}", arr),
+            FieldData::I32(arr) => write!(f, "{:}", arr),
+            FieldData::I64(arr) => write!(f, "{:}", arr),
+            FieldData::F32(arr) => write!(f, "{:}", arr),
+            FieldData::F64(arr) => write!(f, "{:}", arr),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
