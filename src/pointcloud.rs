@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, io::{BufRead, BufReader}};
+use std::{collections::HashMap, fs::File, io::{Read, BufRead, BufReader}};
 use ndarray::Array1;
 use anyhow::Result;
 use byteorder::{ReadBytesExt, LittleEndian};
@@ -70,9 +70,8 @@ impl PointCloud {
                     pc.read_chunk(&mut file, &mut (row_idx as usize))?;
                 }
             }
-            _ => {
-                // ...handle other encodings (Binary, etc.)...
-                todo!()
+            Encoding::BinaryCompressed => {
+                pc.read_compressed(&mut file)?;
             }
         }
 
@@ -239,6 +238,31 @@ impl PointCloud {
                     self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
                 }
             }
+        }
+        Ok(())
+    }
+
+    fn read_compressed(&mut self, bufreader: &mut BufReader<File>) -> Result<()> {
+        use lzf::decompress;
+
+        let compressed_size = bufreader.read_u32::<LittleEndian>()? as usize;
+        let uncompressed_size = bufreader.read_u32::<LittleEndian>()? as usize;
+
+        let mut compressed_buf = vec![0u8; compressed_size];
+        bufreader.read_exact(&mut compressed_buf)?;
+
+        let uncompressed_buf = vec![0u8; uncompressed_size];
+        decompress(&compressed_buf, uncompressed_size).map_err(|e| anyhow::anyhow!(e))?;
+
+        let mut offset = 0;
+        for field_meta in &self.metadata.fields {
+            let block_size = field_meta.count * field_meta.dtype.get_size() * self.metadata.npoints;
+            let slice = &uncompressed_buf[offset..offset + block_size];
+            offset += block_size;
+            self.fields
+                .get_mut(&field_meta.name)
+                .unwrap()
+                .assign_from_buffer(slice);
         }
         Ok(())
     }
