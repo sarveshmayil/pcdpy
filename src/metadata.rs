@@ -138,7 +138,6 @@ pub enum Encoding {
     Ascii,
     Binary,
     BinaryCompressed,
-    BinarySCompressed,
 }
 impl Encoding {
     pub fn as_str(&self) -> &str {
@@ -146,7 +145,6 @@ impl Encoding {
             Encoding::Ascii => "ascii",
             Encoding::Binary => "binary",
             Encoding::BinaryCompressed => "binary_compressed",
-            Encoding::BinarySCompressed => "binaryscompressed",
         }
     }
 
@@ -155,7 +153,6 @@ impl Encoding {
             "ascii" => Some(Encoding::Ascii),
             "binary" => Some(Encoding::Binary),
             "binary_compressed" => Some(Encoding::BinaryCompressed),
-            "binaryscompressed" => Some(Encoding::BinarySCompressed),
             _ => None,
         }
     }
@@ -315,7 +312,6 @@ mod tests {
         assert_eq!(Encoding::Ascii.as_str(), "ascii");
         assert_eq!(Encoding::Binary.as_str(), "binary");
         assert_eq!(Encoding::BinaryCompressed.as_str(), "binary_compressed");
-        assert_eq!(Encoding::BinarySCompressed.as_str(), "binaryscompressed");
     }
 
     #[test]
@@ -323,7 +319,6 @@ mod tests {
         assert_eq!(Encoding::from_str("ascii"), Some(Encoding::Ascii));
         assert_eq!(Encoding::from_str("binary"), Some(Encoding::Binary));
         assert_eq!(Encoding::from_str("binary_compressed"), Some(Encoding::BinaryCompressed));
-        assert_eq!(Encoding::from_str("binaryscompressed"), Some(Encoding::BinarySCompressed));
         assert_eq!(Encoding::from_str("foobar"), None);
     }
 

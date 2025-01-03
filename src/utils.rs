@@ -44,6 +44,11 @@ pub fn load_metadata(bufreader: &mut BufReader<File>) -> Result<Metadata> {
                 if values.len() != 2 {
                     anyhow::bail!("Invalid VERSION line: {}", line);
                 }
+
+                if values[1] != "0.7" && values[1] != ".7" {
+                    anyhow::bail!("Unsupported PCD version: {}", values[1]);
+                }
+
                 version = Some(values[1].to_string());
             }
             "FIELDS" => {
