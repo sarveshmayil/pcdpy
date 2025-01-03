@@ -1,7 +1,8 @@
-use std::{collections::HashMap, fs::File, io::BufReader};
+use std::{collections::HashMap, fs::File, io::{BufRead, BufReader}};
+use ndarray::Array1;
 use anyhow::Result;
 use crate::fielddata::FieldData;
-use crate::metadata::Metadata;
+use crate::metadata::{Dtype, Metadata, Encoding};
 use crate::utils::load_metadata;
 
 
@@ -12,15 +13,15 @@ pub struct PointCloud {
 }
 
 impl PointCloud {
-    pub fn new() -> Self {
+    pub fn new(metadata: &Metadata) -> Self {
         Self {
-            fields: HashMap::new(),
-            metadata: Metadata::new(),
+            fields: metadata.fields.iter().map(|f| (f.name.clone(), FieldData::new(f.dtype, metadata.npoints, f.count))).collect(),
+            metadata: metadata.clone(),
         }
     }
 
     /// Check if PointCloud metadata matches field data
-    pub fn check_metadata(&self) -> Result<bool> {
+    pub fn check_pointcloud(&self) -> Result<bool> {
         if self.metadata.height * self.metadata.width != self.metadata.npoints {
             anyhow::bail!("Metadata height x width does not match npoints");
         }
@@ -55,8 +56,20 @@ impl PointCloud {
     pub fn from_pcd_file(path: &str) -> Result<Self> {
         let mut file = BufReader::new(File::open(path)?);
         let metadata = load_metadata(&mut file)?;
-        let mut pc = PointCloud::new();
-        pc.metadata = metadata;
+        let mut pc = PointCloud::new(&metadata);
+
+        match metadata.encoding {
+            Encoding::Ascii => {
+                for row_idx in 0..metadata.npoints {
+                    pc.read_line(&mut file, &mut (row_idx as usize))?;
+                }
+            }
+            _ => {
+                // ...handle other encodings (Binary, etc.)...
+                todo!()
+            }
+        }
+
         Ok(pc)
     }
 
@@ -64,16 +77,85 @@ impl PointCloud {
     pub fn to_pcd_file(&self, path: &str) -> Result<()> {
         todo!()
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+    fn read_line(&mut self, bufreader: &mut BufReader<File>, idx: &mut usize) -> Result<()> {
+        let mut line = String::new();
+        loop {
+            let bytes_read = bufreader.read_line(&mut line)?;
+            if bytes_read == 0 {
+                anyhow::bail!("Unexpected EOF while reading data line");
+            }
+            if !line.trim().is_empty() {
+                break;
+            }
+            line.clear();
+        }
 
-    #[test]
-    fn test_pointcloud() {
-        let pc = PointCloud::new();
-        assert_eq!(pc.len(), 0);
-        assert!(pc.fields.is_empty());
+        // Parse data line, throw error if invalid
+        let values = line.split_ascii_whitespace().collect::<Vec<&str>>();
+        let expected_num_values: usize = self.metadata.fields.iter().map(|f| f.count).sum();
+        if values.len() != expected_num_values {
+            anyhow::bail!("Invalid data line: expected {} values, got {}", expected_num_values, values.len());
+        }
+
+        for field_meta in self.metadata.fields.iter() {
+            match field_meta.dtype {
+                Dtype::U8 => {
+                    let vals: Vec<u8> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::U16 => {
+                    let vals: Vec<u16> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::U32 => {
+                    let vals: Vec<u32> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::U64 => {
+                    let vals: Vec<u64> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::I8 => {
+                    let vals: Vec<i8> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::I16 => {
+                    let vals: Vec<i16> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::I32 => {
+                    let vals: Vec<i32> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::I64 => {
+                    let vals: Vec<i64> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::F32 => {
+                    let vals: Vec<f32> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::F64 => {
+                    let vals: Vec<f64> = values.iter().take(field_meta.count).map(|&v| v.parse().unwrap()).collect();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn read_chunk(&mut self, bufreader: &mut BufReader<File>, idx: &mut usize) -> Result<()> {
+        todo!()
     }
 }
