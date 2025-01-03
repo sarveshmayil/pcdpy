@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::BufReader;
+use std::{collections::HashMap, fs::File, io::BufReader};
 use anyhow::Result;
 use crate::fielddata::FieldData;
 use crate::metadata::Metadata;
@@ -23,6 +21,10 @@ impl PointCloud {
 
     /// Check if PointCloud metadata matches field data
     pub fn check_metadata(&self) -> Result<bool> {
+        if self.metadata.height * self.metadata.width != self.metadata.npoints {
+            anyhow::bail!("Metadata height x width does not match npoints");
+        }
+
         if self.metadata.fields.len() != self.fields.len() {
             anyhow::bail!("Metadata field count does not match field count");
         }
