@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fs::File, io::{BufRead, BufReader}};
 use ndarray::Array1;
 use anyhow::Result;
+use byteorder::{ReadBytesExt, LittleEndian};
 use crate::fielddata::FieldData;
 use crate::metadata::{Dtype, Metadata, Encoding};
 use crate::utils::load_metadata;
@@ -62,6 +63,11 @@ impl PointCloud {
             Encoding::Ascii => {
                 for row_idx in 0..metadata.npoints {
                     pc.read_line(&mut file, &mut (row_idx as usize))?;
+                }
+            }
+            Encoding::Binary => {
+                for row_idx in 0..metadata.npoints {
+                    pc.read_chunk(&mut file, &mut (row_idx as usize))?;
                 }
             }
             _ => {
@@ -156,6 +162,99 @@ impl PointCloud {
     }
 
     fn read_chunk(&mut self, bufreader: &mut BufReader<File>, idx: &mut usize) -> Result<()> {
-        todo!()
+        for field_meta in self.metadata.fields.iter() {
+            let count_range = 0..field_meta.count;
+
+            match field_meta.dtype {
+                Dtype::U8 => {
+                    let vals = count_range
+                        .map(|_| bufreader.read_u8().unwrap())
+                        .collect::<Vec<u8>>();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::U16 => {
+                    let vals = count_range
+                        .map(|_| bufreader.read_u16::<LittleEndian>().unwrap())
+                        .collect::<Vec<u16>>();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::U32 => {
+                    let vals = count_range
+                        .map(|_| bufreader.read_u32::<LittleEndian>().unwrap())
+                        .collect::<Vec<u32>>();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::U64 => {
+                    let vals = count_range
+                        .map(|_| bufreader.read_u64::<LittleEndian>().unwrap())
+                        .collect::<Vec<u64>>();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::I8 => {
+                    let vals = count_range
+                        .map(|_| bufreader.read_i8().unwrap())
+                        .collect::<Vec<i8>>();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::I16 => {
+                    let vals = count_range
+                        .map(|_| bufreader.read_i16::<LittleEndian>().unwrap())
+                        .collect::<Vec<i16>>();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::I32 => {
+                    let vals = count_range
+                        .map(|_| bufreader.read_i32::<LittleEndian>().unwrap())
+                        .collect::<Vec<i32>>();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::I64 => {
+                    let vals = count_range
+                        .map(|_| bufreader.read_i64::<LittleEndian>().unwrap())
+                        .collect::<Vec<i64>>();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::F32 => {
+                    let vals = count_range
+                        .map(|_| bufreader.read_f32::<LittleEndian>().unwrap())
+                        .collect::<Vec<f32>>();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+                Dtype::F64 => {
+                    let vals = count_range
+                        .map(|_| bufreader.read_f64::<LittleEndian>().unwrap())
+                        .collect::<Vec<f64>>();
+                    let array = Array1::from(vals);
+                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_pcd_file() {
+        let pc = PointCloud::from_pcd_file("/Users/smayil/Downloads/binary.pcd").unwrap();
+
+        println!("{:?}", pc.metadata);
+
+        // assert_eq!(pc.len(), 397);
+        
+        println!("{}, {}", pc.fields.get("x").unwrap().len(), pc.fields.get("x").unwrap().count());
+        println!("{}", pc.fields.get("x").unwrap());
     }
 }
