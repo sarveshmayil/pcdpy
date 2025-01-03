@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+mod utils;
 mod metadata;
 mod fielddata;
 mod pointcloud;

@@ -1,7 +1,10 @@
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
 use anyhow::Result;
 use crate::fielddata::FieldData;
 use crate::metadata::Metadata;
+use crate::utils::load_metadata;
 
 
 #[derive(Debug, Clone)]
@@ -48,11 +51,27 @@ impl PointCloud {
 
     /// Read data from PCD file and return a new PointCloud
     pub fn from_pcd_file(path: &str) -> Result<Self> {
-        todo!()
+        let mut file = BufReader::new(File::open(path)?);
+        let metadata = load_metadata(&mut file)?;
+        let mut pc = PointCloud::new();
+        pc.metadata = metadata;
+        Ok(pc)
     }
 
     /// Write PointCloud data to a PCD file
     pub fn to_pcd_file(&self, path: &str) -> Result<()> {
         todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pointcloud() {
+        let pc = PointCloud::new();
+        assert_eq!(pc.len(), 0);
+        assert!(pc.fields.is_empty());
     }
 }
