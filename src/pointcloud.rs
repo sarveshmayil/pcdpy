@@ -104,55 +104,57 @@ impl PointCloud {
             anyhow::bail!("Invalid data line: expected {} values, got {}", expected_num_values, values.len());
         }
 
+        let mut values_iter = values.into_iter();
+
         for field_meta in self.metadata.fields.iter() {
             match field_meta.dtype {
                 Dtype::U8 => {
-                    let vals: Vec<u8> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let vals: Vec<u8> = values_iter.by_ref().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
                     let array = Array1::from(vals);
                     self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
                 }
                 Dtype::U16 => {
-                    let vals: Vec<u16> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let vals: Vec<u16> = values_iter.by_ref().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
                     let array = Array1::from(vals);
                     self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
                 }
                 Dtype::U32 => {
-                    let vals: Vec<u32> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let vals: Vec<u32> = values_iter.by_ref().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
                     let array = Array1::from(vals);
                     self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
                 }
                 Dtype::U64 => {
-                    let vals: Vec<u64> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let vals: Vec<u64> = values_iter.by_ref().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
                     let array = Array1::from(vals);
                     self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
                 }
                 Dtype::I8 => {
-                    let vals: Vec<i8> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let vals: Vec<i8> = values_iter.by_ref().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
                     let array = Array1::from(vals);
                     self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
                 }
                 Dtype::I16 => {
-                    let vals: Vec<i16> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let vals: Vec<i16> = values_iter.by_ref().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
                     let array = Array1::from(vals);
                     self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
                 }
                 Dtype::I32 => {
-                    let vals: Vec<i32> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let vals: Vec<i32> = values_iter.by_ref().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
                     let array = Array1::from(vals);
                     self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
                 }
                 Dtype::I64 => {
-                    let vals: Vec<i64> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let vals: Vec<i64> = values_iter.by_ref().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
                     let array = Array1::from(vals);
                     self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
                 }
                 Dtype::F32 => {
-                    let vals: Vec<f32> = values.iter().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
+                    let vals: Vec<f32> = values_iter.by_ref().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
                     let array = Array1::from(vals);
                     self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
                 }
                 Dtype::F64 => {
-                    let vals: Vec<f64> = values.iter().take(field_meta.count).map(|&v| v.parse().unwrap()).collect();
+                    let vals: Vec<f64> = values_iter.by_ref().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
                     let array = Array1::from(vals);
                     self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
                 }
