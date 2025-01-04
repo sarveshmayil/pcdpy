@@ -16,6 +16,13 @@ impl PyPointCloud {
         Ok(PyPointCloud { pc })
     }
 
+    #[staticmethod]
+    pub fn from_metadata(metadata: &Bound<'_, PyMetadata>) -> PyResult<Self> {
+        let meta = metadata.borrow().inner.lock().unwrap().clone();
+        let pc = PointCloud::new(&meta);
+        Ok(PyPointCloud { pc })
+    }
+
     pub fn save(&self, path: &str) -> PyResult<()> {
         self.pc.to_pcd_file(path)
             .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
