@@ -63,6 +63,14 @@ impl PyPointCloud {
     //     }
     // }
 
+    fn get_field<'py>(&self, py: Python<'py>, field_name: &str) -> PyResult<Option<Bound<'py, PyAny>>> {
+        if let Some(field_data) = self.pc.fields.get(field_name) {
+            Ok(Some(field_data.into_pyobject(py)?))
+        } else {
+            Ok(None)
+        }
+    }
+
     // /// Implement __getitem__ in Python:
     // ///   - If key is a str or list of str => treat as field(s).
     // ///   - If key is a slice => return a *new* sliced PointCloud.

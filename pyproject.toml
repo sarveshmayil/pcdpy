@@ -7,7 +7,9 @@ authors = [
     { name = "Sarvesh Mayilvahanan", email = "39343912+sarveshmayil@users.noreply.github.com" }
 ]
 requires-python = ">=3.7"
-dependencies = []
+dependencies = [
+    "numpy>=1.21; python_version < '3.12'", "numpy>=1.25; python_version >= '3.12'",
+]
 
 [tool.maturin]
 module-name = "pcdpy._core"

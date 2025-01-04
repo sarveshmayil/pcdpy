@@ -1,6 +1,11 @@
 use num_traits::NumCast;
+use pyo3::{prelude::*, IntoPyObject, IntoPyObjectExt};
 use ndarray::{Array1, Array2, s};
+use numpy::{PyArray2, Element};
 use crate::metadata::{Data, Dtype};
+
+pub trait NumpyElement: Element + NumCast {}
+impl<T: Element + NumCast> NumpyElement for T {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldData {
@@ -125,6 +130,22 @@ impl FieldData {
             FieldData::I64(arr) => arr.slice(s![row_idx, ..]).mapv(|x| A::from(x).unwrap()),
             FieldData::F32(arr) => arr.slice(s![row_idx, ..]).mapv(|x| A::from(x).unwrap()),
             FieldData::F64(arr) => arr.slice(s![row_idx, ..]).mapv(|x| A::from(x).unwrap()),
+        }
+    }
+
+    /// Return a NumPy array of the specified type.
+    pub fn into_pyarray<'py, T: NumpyElement>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<T>>> {
+        match self {
+            FieldData::U8(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
+            FieldData::U16(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
+            FieldData::U32(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
+            FieldData::U64(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
+            FieldData::I8(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
+            FieldData::I16(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
+            FieldData::I32(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
+            FieldData::I64(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
+            FieldData::F32(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
+            FieldData::F64(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
         }
     }
 
@@ -261,6 +282,27 @@ impl FieldData {
                     arr.as_slice_mut().unwrap()[i] = f64::from_le_bytes(chunk.try_into().unwrap());
                 }
             }
+        }
+    }
+}
+
+impl<'py> IntoPyObject<'py> for &FieldData {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> PyResult<Self::Output> {
+        match self {
+            FieldData::U8(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
+            FieldData::U16(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
+            FieldData::U32(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
+            FieldData::U64(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
+            FieldData::I8(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
+            FieldData::I16(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
+            FieldData::I32(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
+            FieldData::I64(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
+            FieldData::F32(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
+            FieldData::F64(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
         }
     }
 }
