@@ -1,4 +1,5 @@
 use std::{iter::FromIterator, ops::{Index, IndexMut}};
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Metadata {
@@ -11,8 +12,23 @@ pub struct Metadata {
     pub version: String,
 }
 
+pub type SharedMetadata = Arc<Mutex<Metadata>>;
+
 impl Metadata {
-    pub fn new() -> Self {
+    pub fn new(names: Vec<String>, types: Vec<String>, sizes: Vec<usize>, counts: Option<Vec<usize>>, width: usize, height: usize, npoints: usize, viewpoint: Option<Vec<f32>>, encoding: Option<&str>, version: Option<&str>) -> Self {
+        let fields = names.iter()
+            .zip(types.iter().zip(sizes.iter()))
+            .zip(counts.unwrap_or(vec![1; names.len()]).iter())
+            .map(|((name, (t, s)), c)| FieldMeta { name: name.to_string(), dtype: Dtype::from_type_size(t, s), count: *c })
+            .collect();
+        let viewpoint = viewpoint.map(|vp| Viewpoint::from(vp)).unwrap_or_default();
+        let encoding = Encoding::from_str(encoding.unwrap_or("binary_compressed")).unwrap();
+        Self { fields, width, height, npoints, viewpoint, encoding, version: version.unwrap_or("0.7").to_string() }
+    }
+}
+
+impl Default for Metadata {
+    fn default() -> Self {
         Self {
             fields: FieldSchema::new(),
             width: 0,
@@ -118,6 +134,10 @@ impl Viewpoint {
             qz: values[6],
         }
     }
+
+    pub fn to_vec(&self) -> Vec<f32> {
+        vec![self.tx, self.ty, self.tz, self.qw, self.qx, self.qy, self.qz]
+    }
 }
 impl Default for Viewpoint {
     fn default() -> Self {
@@ -130,6 +150,11 @@ impl Default for Viewpoint {
             qy: 0.0,
             qz: 0.0,
         }
+    }
+}
+impl std::fmt::Display for Viewpoint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "tx: {:.2}, ty: {:.2}, tz: {:.2}, qw: {:.2}, qx: {:.2}, qy: {:.2}, qz: {:.2}", self.tx, self.ty, self.tz, self.qw, self.qx, self.qy, self.qz)
     }
 }
 
@@ -196,6 +221,16 @@ impl FieldSchema {
 
     pub fn iter(&self) -> std::slice::Iter<'_, FieldMeta> {
         self.0.iter()
+    }
+}
+
+impl std::fmt::Display for FieldSchema {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let fields = self.0.iter()
+            .map(|fm| format!(" - {}[{}] - {}", fm.name, fm.count, fm.dtype))
+            .collect::<Vec<String>>()
+            .join("\n");
+        write!(f, "{}", fields)
     }
 }
 
@@ -323,8 +358,8 @@ mod tests {
     }
 
     #[test]
-    fn test_metadata_new() {
-        let meta = Metadata::new();
+    fn test_metadata_default() {
+        let meta = Metadata::default();
         assert_eq!(meta.fields, FieldSchema::new());
         assert_eq!(meta.width, 0);
         assert_eq!(meta.height, 1);

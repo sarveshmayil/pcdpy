@@ -2,44 +2,52 @@ use std::{collections::HashMap, fs::File, io::{Read, BufRead, BufReader}};
 use ndarray::Array1;
 use anyhow::Result;
 use byteorder::{ReadBytesExt, LittleEndian};
+use std::sync::{Arc, Mutex};
 use crate::fielddata::FieldData;
-use crate::metadata::{Dtype, Metadata, Encoding};
+use crate::metadata::{Dtype, Metadata, Encoding, SharedMetadata};
 use crate::utils::load_metadata;
 
 
 #[derive(Debug, Clone)]
 pub struct PointCloud {
     pub fields: HashMap<String, FieldData>,
-    pub metadata: Metadata,
+    pub metadata: SharedMetadata,
 }
 
 impl PointCloud {
-    pub fn new(metadata: &Metadata) -> Self {
+    pub fn new(md: &Metadata) -> Self {
+        let npoints = md.npoints;
+        let shared_md = Arc::new(Mutex::new(md.clone()));
+        let mut fields_map = HashMap::new();
+        for f in &md.fields {
+            fields_map.insert(f.name.clone(), FieldData::new(f.dtype, npoints, f.count));
+        }
         Self {
-            fields: metadata.fields.iter().map(|f| (f.name.clone(), FieldData::new(f.dtype, metadata.npoints, f.count))).collect(),
-            metadata: metadata.clone(),
+            fields: fields_map,
+            metadata: shared_md,
         }
     }
 
     /// Check if PointCloud metadata matches field data
     pub fn check_pointcloud(&self) -> Result<bool> {
-        if self.metadata.height * self.metadata.width != self.metadata.npoints {
+        let md = self.metadata.lock().unwrap();
+        if md.height * md.width != md.npoints {
             anyhow::bail!("Metadata height x width does not match npoints");
         }
 
-        if self.metadata.fields.len() != self.fields.len() {
+        if md.fields.len() != self.fields.len() {
             anyhow::bail!("Metadata field count does not match field count");
         }
 
         for (field_name, field_data) in &self.fields {
-            if let Some(field_meta) = self.metadata.fields.iter().find(|f| f.name == *field_name) {
+            if let Some(field_meta) = md.fields.iter().find(|f| f.name == *field_name) {
                 if field_data.dtype() != field_meta.dtype {
                     anyhow::bail!("Field '{}' dtype mismatch: expected {:?}, got {:?}", 
                         field_name, field_meta.dtype, field_data.dtype());
                 }
-                if field_data.len() != self.metadata.npoints {
+                if field_data.len() != md.npoints {
                     anyhow::bail!("Field '{}' length mismatch: expected {}, got {}", 
-                        field_name, self.metadata.npoints, field_data.len());
+                        field_name, md.npoints, field_data.len());
                 }
             } else {
                 anyhow::bail!("Field '{}' exists in data but not in metadata", field_name);
@@ -50,23 +58,24 @@ impl PointCloud {
 
     /// Return number of points in PointCloud
     pub fn len(&self) -> usize {
-        self.metadata.npoints
+        let md = self.metadata.lock().unwrap();
+        md.npoints
     }
 
     /// Read data from PCD file and return a new PointCloud
     pub fn from_pcd_file(path: &str) -> Result<Self> {
         let mut file = BufReader::new(File::open(path)?);
-        let metadata = load_metadata(&mut file)?;
-        let mut pc = PointCloud::new(&metadata);
+        let md = load_metadata(&mut file)?;
+        let mut pc = PointCloud::new(&md);
 
-        match metadata.encoding {
+        match md.encoding {
             Encoding::Ascii => {
-                for row_idx in 0..metadata.npoints {
+                for row_idx in 0..md.npoints {
                     pc.read_line(&mut file, &mut (row_idx as usize))?;
                 }
             }
             Encoding::Binary => {
-                for row_idx in 0..metadata.npoints {
+                for row_idx in 0..md.npoints {
                     pc.read_chunk(&mut file, &mut (row_idx as usize))?;
                 }
             }
@@ -98,14 +107,15 @@ impl PointCloud {
 
         // Parse data line, throw error if invalid
         let values = line.split_ascii_whitespace().collect::<Vec<&str>>();
-        let expected_num_values: usize = self.metadata.fields.iter().map(|f| f.count).sum();
+        let md = self.metadata.lock().unwrap();
+        let expected_num_values: usize = md.fields.iter().map(|f| f.count).sum();
         if values.len() != expected_num_values {
             anyhow::bail!("Invalid data line: expected {} values, got {}", expected_num_values, values.len());
         }
 
         let mut values_iter = values.into_iter();
 
-        for field_meta in self.metadata.fields.iter() {
+        for field_meta in md.fields.iter() {
             match field_meta.dtype {
                 Dtype::U8 => {
                     let vals: Vec<u8> = values_iter.by_ref().take(field_meta.count).map(|v| v.parse().unwrap()).collect();
@@ -163,7 +173,8 @@ impl PointCloud {
     }
 
     fn read_chunk(&mut self, bufreader: &mut BufReader<File>, idx: &mut usize) -> Result<()> {
-        for field_meta in self.metadata.fields.iter() {
+        let md = self.metadata.lock().unwrap();
+        for field_meta in md.fields.iter() {
             let count_range = 0..field_meta.count;
 
             match field_meta.dtype {
@@ -255,8 +266,9 @@ impl PointCloud {
         decompress(&compressed_buf, uncompressed_size).map_err(|e| anyhow::anyhow!(e))?;
 
         let mut offset = 0;
-        for field_meta in &self.metadata.fields {
-            let block_size = field_meta.count * field_meta.dtype.get_size() * self.metadata.npoints;
+        let md = self.metadata.lock().unwrap();
+        for field_meta in &md.fields {
+            let block_size = field_meta.count * field_meta.dtype.get_size() * md.npoints;
             let slice = &uncompressed_buf[offset..offset + block_size];
             offset += block_size;
             self.fields

@@ -4,6 +4,7 @@ mod utils;
 mod metadata;
 mod fielddata;
 mod pointcloud;
+mod pymetadata;
 mod pypointcloud;
 
 /// A Python module implemented in Rust. The name of this function must match
@@ -11,6 +12,7 @@ mod pypointcloud;
 /// import the module.
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<pymetadata::PyMetadata>()?;
     m.add_class::<pypointcloud::PyPointCloud>()?;
     Ok(())
 }
