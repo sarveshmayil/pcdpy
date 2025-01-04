@@ -1,11 +1,20 @@
 use num_traits::NumCast;
 use pyo3::{prelude::*, IntoPyObject, IntoPyObjectExt};
 use ndarray::{Array1, Array2, s};
-use numpy::{PyArray2, Element};
+use numpy::{PyArray2, PyArray3, Element};
 use crate::metadata::{Data, Dtype};
 
 pub trait NumpyElement: Element + NumCast {}
 impl<T: Element + NumCast> NumpyElement for T {}
+
+pub trait IntoPyObjectShaped<'py> {
+    type Target;
+    type Output;
+    type Error;
+
+    fn into_pyobject_shaped(self, py: Python<'py>, width: usize, height: usize) 
+        -> Result<Self::Output, Self::Error>;
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldData {
@@ -146,6 +155,23 @@ impl FieldData {
             FieldData::I64(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
             FieldData::F32(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
             FieldData::F64(arr) => Ok(PyArray2::from_array(py, &arr.mapv(|x| T::from(x).unwrap()))),
+        }
+    }
+
+    pub fn into_pyarray_shaped<'py, T: NumpyElement>(&self, py: Python<'py>, width: usize, height: usize) -> PyResult<Bound<'py, PyArray3<T>>> {
+        assert_eq!(self.npoints(), width * height, "Shape must match number of points");
+
+        match self {
+            FieldData::U8(arr) => Ok(PyArray3::from_array(py, &arr.mapv(|x| T::from(x).unwrap()).into_shape_with_order((width, height, self.count())).unwrap())),
+            FieldData::U16(arr) => Ok(PyArray3::from_array(py, &arr.mapv(|x| T::from(x).unwrap()).into_shape_with_order((width, height, self.count())).unwrap())),
+            FieldData::U32(arr) => Ok(PyArray3::from_array(py, &arr.mapv(|x| T::from(x).unwrap()).into_shape_with_order((width, height, self.count())).unwrap())),
+            FieldData::U64(arr) => Ok(PyArray3::from_array(py, &arr.mapv(|x| T::from(x).unwrap()).into_shape_with_order((width, height, self.count())).unwrap())),
+            FieldData::I8(arr) => Ok(PyArray3::from_array(py, &arr.mapv(|x| T::from(x).unwrap()).into_shape_with_order((width, height, self.count())).unwrap())),
+            FieldData::I16(arr) => Ok(PyArray3::from_array(py, &arr.mapv(|x| T::from(x).unwrap()).into_shape_with_order((width, height, self.count())).unwrap())),
+            FieldData::I32(arr) => Ok(PyArray3::from_array(py, &arr.mapv(|x| T::from(x).unwrap()).into_shape_with_order((width, height, self.count())).unwrap())),
+            FieldData::I64(arr) => Ok(PyArray3::from_array(py, &arr.mapv(|x| T::from(x).unwrap()).into_shape_with_order((width, height, self.count())).unwrap())),
+            FieldData::F32(arr) => Ok(PyArray3::from_array(py, &arr.mapv(|x| T::from(x).unwrap()).into_shape_with_order((width, height, self.count())).unwrap())),
+            FieldData::F64(arr) => Ok(PyArray3::from_array(py, &arr.mapv(|x| T::from(x).unwrap()).into_shape_with_order((width, height, self.count())).unwrap())),
         }
     }
 
@@ -303,6 +329,30 @@ impl<'py> IntoPyObject<'py> for &FieldData {
             FieldData::I64(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
             FieldData::F32(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
             FieldData::F64(arr) => Ok(PyArray2::from_array(py, arr).into_bound_py_any(py)?),
+        }
+    }
+}
+
+impl<'py> IntoPyObjectShaped<'py> for &FieldData {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject_shaped(self, py: Python<'py>, width: usize, height: usize) 
+        -> PyResult<Self::Output> {
+        assert_eq!(self.npoints(), width * height, "Shape must match number of points");
+
+        match self {
+            FieldData::U8(arr) => Ok(PyArray3::from_array(py, &arr.clone().into_shape_with_order((width, height, self.count())).unwrap()).into_bound_py_any(py)?),
+            FieldData::U16(arr) => Ok(PyArray3::from_array(py, &arr.clone().into_shape_with_order((width, height, self.count())).unwrap()).into_bound_py_any(py)?),
+            FieldData::U32(arr) => Ok(PyArray3::from_array(py, &arr.clone().into_shape_with_order((width, height, self.count())).unwrap()).into_bound_py_any(py)?),
+            FieldData::U64(arr) => Ok(PyArray3::from_array(py, &arr.clone().into_shape_with_order((width, height, self.count())).unwrap()).into_bound_py_any(py)?),
+            FieldData::I8(arr) => Ok(PyArray3::from_array(py, &arr.clone().into_shape_with_order((width, height, self.count())).unwrap()).into_bound_py_any(py)?),
+            FieldData::I16(arr) => Ok(PyArray3::from_array(py, &arr.clone().into_shape_with_order((width, height, self.count())).unwrap()).into_bound_py_any(py)?),
+            FieldData::I32(arr) => Ok(PyArray3::from_array(py, &arr.clone().into_shape_with_order((width, height, self.count())).unwrap()).into_bound_py_any(py)?),
+            FieldData::I64(arr) => Ok(PyArray3::from_array(py, &arr.clone().into_shape_with_order((width, height, self.count())).unwrap()).into_bound_py_any(py)?),
+            FieldData::F32(arr) => Ok(PyArray3::from_array(py, &arr.clone().into_shape_with_order((width, height, self.count())).unwrap()).into_bound_py_any(py)?),
+            FieldData::F64(arr) => Ok(PyArray3::from_array(py, &arr.clone().into_shape_with_order((width, height, self.count())).unwrap()).into_bound_py_any(py)?),
         }
     }
 }

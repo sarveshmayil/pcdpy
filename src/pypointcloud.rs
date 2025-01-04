@@ -2,7 +2,7 @@
 use pyo3::{exceptions::{PyKeyError, PyTypeError}, prelude::*, types::PySlice, IntoPyObjectExt};
 use numpy::{PyArray2, PyArrayMethods};
 use ndarray::s;
-use crate::pointcloud::PointCloud;
+use crate::{fielddata::IntoPyObjectShaped, pointcloud::PointCloud};
 use crate::pymetadata::PyMetadata;
 
 #[pyclass(name = "PointCloud")]
@@ -56,9 +56,25 @@ impl PyPointCloud {
         }
     }
 
+    /// Get a field by name
+    /// Returns None if field does not exist
+    /// Returns a 2D Numpy array if field exists (npoints, count)
     fn get_field<'py>(&self, py: Python<'py>, field_name: &str) -> PyResult<Option<Bound<'py, PyAny>>> {
         if let Some(field_data) = self.pc.fields.get(field_name) {
             Ok(Some(field_data.into_pyobject(py)?))
+        } else {
+            Ok(None)
+        }
+    }
+    
+    /// Get a field by name, reshaped to (height, width)
+    /// Returns None if field does not exist
+    /// Returns a 3D Numpy array if field exists (height, width, count)
+    fn get_field_shaped<'py>(&self, py: Python<'py>, field_name: &str) -> PyResult<Option<Bound<'py, PyAny>>> {
+        let width = self.pc.metadata.lock().unwrap().width;
+        let height = self.pc.metadata.lock().unwrap().height;
+        if let Some(field_data) = self.pc.fields.get(field_name) {
+            Ok(Some(field_data.into_pyobject_shaped(py, width, height)?))
         } else {
             Ok(None)
         }
