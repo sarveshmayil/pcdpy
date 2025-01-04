@@ -96,6 +96,23 @@ impl FieldData {
         }
     }
 
+    // Return the data as a 2D array of the specified type.
+    pub fn get_data<A: Data + NumCast>(&self) -> Array2<A> {
+        match self {
+            FieldData::U8(arr) => arr.mapv(|x| A::from(x).unwrap()),
+            FieldData::U16(arr) => arr.mapv(|x| A::from(x).unwrap()),
+            FieldData::U32(arr) => arr.mapv(|x| A::from(x).unwrap()),
+            FieldData::U64(arr) => arr.mapv(|x| A::from(x).unwrap()),
+            FieldData::I8(arr) => arr.mapv(|x| A::from(x).unwrap()),
+            FieldData::I16(arr) => arr.mapv(|x| A::from(x).unwrap()),
+            FieldData::I32(arr) => arr.mapv(|x| A::from(x).unwrap()),
+            FieldData::I64(arr) => arr.mapv(|x| A::from(x).unwrap()),
+            FieldData::F32(arr) => arr.mapv(|x| A::from(x).unwrap()),
+            FieldData::F64(arr) => arr.mapv(|x| A::from(x).unwrap()),
+        }
+    }
+
+    /// Return a single row of data as a 1D array of the specified type.
     pub fn get_row<A: Data + NumCast>(&self, row_idx: usize) -> Array1<A> {
         match self {
             FieldData::U8(arr) => arr.slice(s![row_idx, ..]).mapv(|x| A::from(x).unwrap()),
@@ -128,12 +145,13 @@ impl FieldData {
         }
     }
 
-    pub fn assign_row<T>(&mut self, row_idx: usize, data: &Array1<T>)
+    /// Assign a single row of data to this field.
+    pub fn assign_row<A>(&mut self, row_idx: usize, data: &Array1<A>)
     where
-        T: Data + NumCast,
+        A: Data + NumCast,
     {
         assert_eq!(self.count(), data.len(), "Data length does not match field count");
-        assert_eq!(T::DTYPE, self.dtype(), "Expected data type {}, got {}", self.dtype(), T::DTYPE);
+        assert_eq!(A::DTYPE, self.dtype(), "Expected data type {}, got {}", self.dtype(), A::DTYPE);
 
         match self {
             FieldData::U8(arr) => {
@@ -189,6 +207,7 @@ impl FieldData {
         }
     }
 
+    /// Assign data from a buffer to this field.
     pub fn assign_from_buffer(&mut self, buffer: &[u8]) {
         let dsize = self.dtype().get_size();
         assert_eq!(buffer.len(), self.len() * dsize, "Buffer length mismatch");

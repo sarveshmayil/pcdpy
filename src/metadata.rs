@@ -25,6 +25,19 @@ impl Metadata {
         let encoding = Encoding::from_str(encoding.unwrap_or("binary_compressed")).unwrap();
         Self { fields, width, height, npoints, viewpoint, encoding, version: version.unwrap_or("0.7").to_string() }
     }
+
+    pub fn from_shared(shared: SharedMetadata) -> Self {
+        shared.lock().unwrap().clone()
+    }
+
+    pub fn trim(&mut self, n: usize) {
+        self.npoints = n;
+
+        // change width, height to maintain same aspect ratio with new npoints
+        let new_width = (n as f32 / self.height as f32).ceil() as usize;
+        self.width = new_width;
+        self.height = (n as f32 / new_width as f32).ceil() as usize;
+    }
 }
 
 impl Default for Metadata {

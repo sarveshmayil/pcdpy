@@ -28,6 +28,14 @@ impl PointCloud {
         }
     }
 
+    pub fn empty(md: &Metadata) -> Self {
+        let shared_md = Arc::new(Mutex::new(md.clone()));
+        Self {
+            fields: HashMap::new(),
+            metadata: shared_md,
+        }
+    }
+
     /// Check if PointCloud metadata matches field data
     pub fn check_pointcloud(&self) -> Result<bool> {
         let md = self.metadata.lock().unwrap();
@@ -277,22 +285,5 @@ impl PointCloud {
                 .assign_from_buffer(slice);
         }
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_from_pcd_file() {
-        let pc = PointCloud::from_pcd_file("/Users/smayil/Downloads/binary.pcd").unwrap();
-
-        println!("{:?}", pc.metadata);
-
-        // assert_eq!(pc.len(), 397);
-        
-        println!("{}, {}", pc.fields.get("x").unwrap().len(), pc.fields.get("x").unwrap().count());
-        println!("{}", pc.fields.get("x").unwrap());
     }
 }
