@@ -310,6 +310,63 @@ impl FieldData {
             }
         }
     }
+
+    /// Assign a single row of data from a buffer to this field.
+    pub fn assign_row_from_buffer(&mut self, row_idx: usize, buffer: &[u8]) {
+        let dsize = self.dtype().get_size();
+        assert_eq!(buffer.len(), self.count() * dsize, "Buffer length mismatch");
+
+        match self {
+            FieldData::U8(arr) => {
+                arr.slice_mut(s![row_idx, ..]).as_slice_mut().unwrap().copy_from_slice(buffer);
+            }
+            FieldData::U16(arr) => {
+                for (i, chunk) in buffer.chunks_exact(dsize).enumerate() {
+                    arr.slice_mut(s![row_idx, ..]).as_slice_mut().unwrap()[i] = u16::from_le_bytes(chunk.try_into().unwrap());
+                }
+            }
+            FieldData::U32(arr) => {
+                for (i, chunk) in buffer.chunks_exact(dsize).enumerate() {
+                    arr.slice_mut(s![row_idx, ..]).as_slice_mut().unwrap()[i] = u32::from_le_bytes(chunk.try_into().unwrap());
+                }
+            }
+            FieldData::U64(arr) => {
+                for (i, chunk) in buffer.chunks_exact(dsize).enumerate() {
+                    arr.slice_mut(s![row_idx, ..]).as_slice_mut().unwrap()[i] = u64::from_le_bytes(chunk.try_into().unwrap());
+                }
+            }
+            FieldData::I8(arr) => {
+                for (i, &b) in buffer.iter().enumerate() {
+                    arr.slice_mut(s![row_idx, ..]).as_slice_mut().unwrap()[i] = b as i8;
+                }
+            }
+            FieldData::I16(arr) => {
+                for (i, chunk) in buffer.chunks_exact(dsize).enumerate() {
+                    arr.slice_mut(s![row_idx, ..]).as_slice_mut().unwrap()[i] = i16::from_le_bytes(chunk.try_into().unwrap());
+                }
+            }
+            FieldData::I32(arr) => {
+                for (i, chunk) in buffer.chunks_exact(dsize).enumerate() {
+                    arr.slice_mut(s![row_idx, ..]).as_slice_mut().unwrap()[i] = i32::from_le_bytes(chunk.try_into().unwrap());
+                }
+            }
+            FieldData::I64(arr) => {
+                for (i, chunk) in buffer.chunks_exact(dsize).enumerate() {
+                    arr.slice_mut(s![row_idx, ..]).as_slice_mut().unwrap()[i] = i64::from_le_bytes(chunk.try_into().unwrap());
+                }
+            }
+            FieldData::F32(arr) => {
+                for (i, chunk) in buffer.chunks_exact(dsize).enumerate() {
+                    arr.slice_mut(s![row_idx, ..]).as_slice_mut().unwrap()[i] = f32::from_le_bytes(chunk.try_into().unwrap());
+                }
+            }
+            FieldData::F64(arr) => {
+                for (i, chunk) in buffer.chunks_exact(dsize).enumerate() {
+                    arr.slice_mut(s![row_idx, ..]).as_slice_mut().unwrap()[i] = f64::from_le_bytes(chunk.try_into().unwrap());
+                }
+            }
+        }
+    }
 }
 
 impl<'py> IntoPyObject<'py> for &FieldData {

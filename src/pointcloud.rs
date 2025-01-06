@@ -83,9 +83,7 @@ impl PointCloud {
                 }
             }
             Encoding::Binary => {
-                for row_idx in 0..md.npoints {
-                    pc.read_chunk(&mut file, &mut (row_idx as usize))?;
-                }
+                pc.read_chunk(&mut file)?;
             }
             Encoding::BinaryCompressed => {
                 pc.read_compressed(&mut file)?;
@@ -180,83 +178,24 @@ impl PointCloud {
         Ok(())
     }
 
-    fn read_chunk(&mut self, bufreader: &mut BufReader<File>, idx: &mut usize) -> Result<()> {
+    fn read_chunk(&mut self, bufreader: &mut BufReader<File>) -> Result<()> {
         let md = self.metadata.lock().unwrap();
-        for field_meta in md.fields.iter() {
-            let count_range = 0..field_meta.count;
+        let total_size = md.npoints * md.fields.iter().map(|f| f.dtype.get_size() * f.count).sum::<usize>();
 
-            match field_meta.dtype {
-                Dtype::U8 => {
-                    let vals = count_range
-                        .map(|_| bufreader.read_u8().unwrap())
-                        .collect::<Vec<u8>>();
-                    let array = Array1::from(vals);
-                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
-                }
-                Dtype::U16 => {
-                    let vals = count_range
-                        .map(|_| bufreader.read_u16::<LittleEndian>().unwrap())
-                        .collect::<Vec<u16>>();
-                    let array = Array1::from(vals);
-                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
-                }
-                Dtype::U32 => {
-                    let vals = count_range
-                        .map(|_| bufreader.read_u32::<LittleEndian>().unwrap())
-                        .collect::<Vec<u32>>();
-                    let array = Array1::from(vals);
-                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
-                }
-                Dtype::U64 => {
-                    let vals = count_range
-                        .map(|_| bufreader.read_u64::<LittleEndian>().unwrap())
-                        .collect::<Vec<u64>>();
-                    let array = Array1::from(vals);
-                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
-                }
-                Dtype::I8 => {
-                    let vals = count_range
-                        .map(|_| bufreader.read_i8().unwrap())
-                        .collect::<Vec<i8>>();
-                    let array = Array1::from(vals);
-                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
-                }
-                Dtype::I16 => {
-                    let vals = count_range
-                        .map(|_| bufreader.read_i16::<LittleEndian>().unwrap())
-                        .collect::<Vec<i16>>();
-                    let array = Array1::from(vals);
-                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
-                }
-                Dtype::I32 => {
-                    let vals = count_range
-                        .map(|_| bufreader.read_i32::<LittleEndian>().unwrap())
-                        .collect::<Vec<i32>>();
-                    let array = Array1::from(vals);
-                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
-                }
-                Dtype::I64 => {
-                    let vals = count_range
-                        .map(|_| bufreader.read_i64::<LittleEndian>().unwrap())
-                        .collect::<Vec<i64>>();
-                    let array = Array1::from(vals);
-                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
-                }
-                Dtype::F32 => {
-                    let vals = count_range
-                        .map(|_| bufreader.read_f32::<LittleEndian>().unwrap())
-                        .collect::<Vec<f32>>();
-                    let array = Array1::from(vals);
-                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
-                }
-                Dtype::F64 => {
-                    let vals = count_range
-                        .map(|_| bufreader.read_f64::<LittleEndian>().unwrap())
-                        .collect::<Vec<f64>>();
-                    let array = Array1::from(vals);
-                    self.fields.get_mut(&field_meta.name).unwrap().assign_row(*idx, &array);
-                }
-            }
+        let mut data_buffer = vec![0u8; total_size];
+        bufreader.read_exact(&mut data_buffer)?;
+        
+        // Distribute slices of data_buffer to different fields
+        let mut offset = 0;
+        for field_meta in md.fields.iter() {
+            let field_bytes = field_meta.dtype.get_size() * field_meta.count;
+            let chunk = &data_buffer[offset..offset + field_bytes];
+            offset += field_bytes;
+
+            self.fields
+                .get_mut(&field_meta.name)
+                .unwrap()
+                .assign_row_from_buffer(0, chunk);
         }
         Ok(())
     }
