@@ -182,7 +182,7 @@ impl PointCloud {
 
     fn read_chunk(&mut self, bufreader: &mut BufReader<File>, idx: &mut usize) -> Result<()> {
         let md = self.metadata.lock().unwrap();
-        let total_size = md.npoints * md.fields.iter().map(|f| f.dtype.get_size() * f.count).sum::<usize>();
+        let total_size = md.fields.iter().map(|f| f.dtype.get_size() * f.count).sum::<usize>();
 
         let mut data_buffer = vec![0u8; total_size];
         bufreader.read_exact(&mut data_buffer)?;
