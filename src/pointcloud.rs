@@ -83,7 +83,9 @@ impl PointCloud {
                 }
             }
             Encoding::Binary => {
-                pc.read_chunk(&mut file)?;
+                for row_idx in 0..md.npoints {
+                    pc.read_chunk(&mut file, &mut (row_idx as usize))?;
+                }
             }
             Encoding::BinaryCompressed => {
                 pc.read_compressed(&mut file)?;
@@ -178,7 +180,7 @@ impl PointCloud {
         Ok(())
     }
 
-    fn read_chunk(&mut self, bufreader: &mut BufReader<File>) -> Result<()> {
+    fn read_chunk(&mut self, bufreader: &mut BufReader<File>, idx: &mut usize) -> Result<()> {
         let md = self.metadata.lock().unwrap();
         let total_size = md.npoints * md.fields.iter().map(|f| f.dtype.get_size() * f.count).sum::<usize>();
 
@@ -195,7 +197,7 @@ impl PointCloud {
             self.fields
                 .get_mut(&field_meta.name)
                 .unwrap()
-                .assign_row_from_buffer(0, chunk);
+                .assign_row_from_buffer(*idx, chunk);
         }
         Ok(())
     }
