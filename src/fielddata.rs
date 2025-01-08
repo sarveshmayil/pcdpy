@@ -1,7 +1,7 @@
 use num_traits::NumCast;
 use pyo3::{prelude::*, IntoPyObject, IntoPyObjectExt, exceptions::PyValueError};
 use ndarray::{Array1, Array2, s};
-use numpy::{PyArray2, PyArray3, Element};
+use numpy::{PyArray2, PyArray3, Element, PyReadonlyArray2};
 use crate::metadata::{Data, Dtype};
 
 pub trait NumpyElement: Element + NumCast {}
@@ -43,6 +43,21 @@ impl FieldData {
             Dtype::I64 => FieldData::I64(Array2::zeros((npoints, count))),
             Dtype::F32 => FieldData::F32(Array2::zeros((npoints, count))),
             Dtype::F64 => FieldData::F64(Array2::zeros((npoints, count))),
+        }
+    }
+
+    pub fn from_pyarray<'py>(pyarray: &Bound<'py, PyAny>, dtype: Dtype) -> PyResult<Self> {
+        match dtype {
+            Dtype::U8 => Ok(FieldData::U8(pyarray.extract::<PyReadonlyArray2<u8>>()?.as_array().to_owned())),
+            Dtype::U16 => Ok(FieldData::U16(pyarray.extract::<PyReadonlyArray2<u16>>()?.as_array().to_owned())),
+            Dtype::U32 => Ok(FieldData::U32(pyarray.extract::<PyReadonlyArray2<u32>>()?.as_array().to_owned())),
+            Dtype::U64 => Ok(FieldData::U64(pyarray.extract::<PyReadonlyArray2<u64>>()?.as_array().to_owned())),
+            Dtype::I8 => Ok(FieldData::I8(pyarray.extract::<PyReadonlyArray2<i8>>()?.as_array().to_owned())),
+            Dtype::I16 => Ok(FieldData::I16(pyarray.extract::<PyReadonlyArray2<i16>>()?.as_array().to_owned())),
+            Dtype::I32 => Ok(FieldData::I32(pyarray.extract::<PyReadonlyArray2<i32>>()?.as_array().to_owned())),
+            Dtype::I64 => Ok(FieldData::I64(pyarray.extract::<PyReadonlyArray2<i64>>()?.as_array().to_owned())),
+            Dtype::F32 => Ok(FieldData::F32(pyarray.extract::<PyReadonlyArray2<f32>>()?.as_array().to_owned())),
+            Dtype::F64 => Ok(FieldData::F64(pyarray.extract::<PyReadonlyArray2<f64>>()?.as_array().to_owned())),
         }
     }
 

@@ -1,5 +1,5 @@
 use pyo3::{exceptions::{PyKeyError, PyValueError}, prelude::*, types::PySlice, IntoPyObjectExt};
-use numpy::{PyArray2, PyArrayMethods, PyReadonlyArray2};
+use numpy::{PyArray2, PyArrayMethods};
 use ndarray::s;
 use crate::{fielddata::{FieldData, IntoPyObjectShaped}, pointcloud::PointCloud};
 use crate::pymetadata::PyMetadata;
@@ -178,103 +178,57 @@ impl PyPointCloud {
 
 /// Infer dtype from Numpy array and store it in PointCloud fields
 fn infer_and_store_field<'py>(pc: &mut PointCloud, field_name: &str, pyarray:&Bound<'py, PyAny>) -> PyResult<()> {
-    let mut md = pc.metadata.lock().unwrap();
-    let npoints = md.npoints;
+    if field_name.is_empty() {
+        return Err(PyValueError::new_err("Field name cannot be empty"));
+    }
+
+    let (npoints, existing_field_meta) = {
+        let md = pc.metadata.lock().unwrap();
+        let field_meta = md.fields.iter().find(|f| f.name == field_name).cloned();
+        (md.npoints, field_meta)
+    };
     
     let dtype_obj = pyarray.getattr("dtype")?;
     let dtype_name: String = dtype_obj.getattr("name")?.extract()?;
     let shape = pyarray.getattr("shape")?.extract::<(usize, usize)>()?;
 
     if shape.0 != npoints {
-        return Err(PyValueError::new_err(format!("length mismatch, expected {}, got {}", npoints, shape.0)));
+        return Err(PyValueError::new_err(format!(
+            "Array length mismatch: expected {}, got {}", 
+            npoints, shape.0
+        )));
     }
 
-    match pc.fields.get(field_name) {
-        Some(field) => {
-            let field_dtype = field.dtype().as_numpy_dtype();
-            if field_dtype != dtype_name {
-                return Err(PyValueError::new_err(format!("dtype mismatch, expected {}, got {}", field_dtype, dtype_name)));
-            }
+    let dtype = Dtype::from_numpy_dtype(&dtype_name)
+        .ok_or_else(|| PyValueError::new_err(format!("Unsupported dtype: {}", dtype_name)))?;
 
-            let field_count = field.count();
-            if shape.1 != field_count {
-                return Err(PyValueError::new_err(format!("Field count mismatch, expected {}, got {}", field_count, shape.1)));
-            }
+    // Validate against existing field if present
+    if let Some(field_meta) = existing_field_meta {
+        if field_meta.dtype != dtype {
+            return Err(PyValueError::new_err(format!(
+                "Dtype mismatch: field has {}, array has {}", 
+                field_meta.dtype.as_numpy_dtype(), dtype_name
+            )));
         }
-        None => {
-            md.fields.0.push(FieldMeta {
-                name: field_name.to_string(),
-                dtype: Dtype::from_numpy_dtype(&dtype_name).unwrap(),
-                count: shape.1,
-            });
+        if field_meta.count != shape.1 {
+            return Err(PyValueError::new_err(format!(
+                "Count mismatch: field has {}, array has {}", 
+                field_meta.count, shape.1
+            )));
         }
+    } else {
+        let mut md = pc.metadata.lock().unwrap();
+        md.fields.0.push(FieldMeta {
+            name: field_name.to_string(),
+            dtype,
+            count: shape.1,
+        });
     }
 
-    match dtype_name.as_str() {
-        "uint8" => {
-            let arr = pyarray.extract::<PyReadonlyArray2<u8>>()
-                .map_err(|_| PyValueError::new_err("Did not provide an array with the correct dimensions"))?;
-            let arr_owned = arr.as_array().to_owned();
-            pc.fields.insert(field_name.to_string(), FieldData::U8(arr_owned));
-        }
-        "uint16" => {
-            let arr = pyarray.extract::<PyReadonlyArray2<u16>>()
-                .map_err(|_| PyValueError::new_err("Did not provide an array with the correct dimensions"))?;
-            let arr_owned = arr.as_array().to_owned();
-            pc.fields.insert(field_name.to_string(), FieldData::U16(arr_owned));
-        }
-        "uint32" => {
-            let arr = pyarray.extract::<PyReadonlyArray2<u32>>()
-                .map_err(|_| PyValueError::new_err("Did not provide an array with the correct dimensions"))?;
-            let arr_owned = arr.as_array().to_owned();
-            pc.fields.insert(field_name.to_string(), FieldData::U32(arr_owned));
-        }
-        "uint64" => {
-            let arr = pyarray.extract::<PyReadonlyArray2<u64>>()
-                .map_err(|_| PyValueError::new_err("Did not provide an array with the correct dimensions"))?;
-            let arr_owned = arr.as_array().to_owned();
-            pc.fields.insert(field_name.to_string(), FieldData::U64(arr_owned));
-        }
-        "int8" => {
-            let arr = pyarray.extract::<PyReadonlyArray2<i8>>()
-                .map_err(|_| PyValueError::new_err("Did not provide an array with the correct dimensions"))?;
-            let arr_owned = arr.as_array().to_owned();
-            pc.fields.insert(field_name.to_string(), FieldData::I8(arr_owned));
-        }
-        "int16" => {
-            let arr = pyarray.extract::<PyReadonlyArray2<i16>>()
-                .map_err(|_| PyValueError::new_err("Did not provide an array with the correct dimensions"))?;
-            let arr_owned = arr.as_array().to_owned();
-            pc.fields.insert(field_name.to_string(), FieldData::I16(arr_owned));
-        }
-        "int32" => {
-            let arr = pyarray.extract::<PyReadonlyArray2<i32>>()
-                .map_err(|_| PyValueError::new_err("Did not provide an array with the correct dimensions"))?;
-            let arr_owned = arr.as_array().to_owned();
-            pc.fields.insert(field_name.to_string(), FieldData::I32(arr_owned));
-        }
-        "int64" => {
-            let arr = pyarray.extract::<PyReadonlyArray2<i64>>()
-                .map_err(|_| PyValueError::new_err("Did not provide an array with the correct dimensions"))?;
-            let arr_owned = arr.as_array().to_owned();
-            pc.fields.insert(field_name.to_string(), FieldData::I64(arr_owned));
-        }
-        "float32" => {
-            let arr = pyarray.extract::<PyReadonlyArray2<f32>>()
-                .map_err(|_| PyValueError::new_err("Did not provide an array with the correct dimensions"))?;
-            let arr_owned = arr.as_array().to_owned();
-            pc.fields.insert(field_name.to_string(), FieldData::F32(arr_owned));
-        }
-        "float64" => {
-            let arr = pyarray.extract::<PyReadonlyArray2<f64>>()
-                .map_err(|_| PyValueError::new_err("Did not provide an array with the correct dimensions"))?;
-            let arr_owned = arr.as_array().to_owned();
-            pc.fields.insert(field_name.to_string(), FieldData::F64(arr_owned));
-        }
-        other => {
-            return Err(PyValueError::new_err(format!("Unsupported dtype {}", other)));
-        }
-    }
+    // Convert array to FieldData
+    let field_data = FieldData::from_pyarray(pyarray, dtype)?;
+
+    pc.fields.insert(field_name.to_string(), field_data);
 
     Ok(())
 }
