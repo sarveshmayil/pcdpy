@@ -37,31 +37,21 @@ impl PointCloud {
     }
 
     /// Check if PointCloud metadata matches field data
-    pub fn check_pointcloud(&self) -> Result<bool> {
+    pub fn check_pointcloud(&self) -> Result<()> {
         let md = self.metadata.lock().unwrap();
-        if md.height * md.width != md.npoints {
-            anyhow::bail!("Metadata height x width does not match npoints");
-        }
 
-        if md.fields.len() != self.fields.len() {
-            anyhow::bail!("Metadata field count does not match field count");
-        }
+        anyhow::ensure!(md.height * md.width == md.npoints, "Metadata height x width does not match npoints");
+        anyhow::ensure!(md.fields.len() == self.fields.len(), "Metadata field count does not match field count");
 
         for (field_name, field_data) in &self.fields {
             if let Some(field_meta) = md.fields.iter().find(|f| f.name == *field_name) {
-                if field_data.dtype() != field_meta.dtype {
-                    anyhow::bail!("Field '{}' dtype mismatch: expected {:?}, got {:?}", 
-                        field_name, field_meta.dtype, field_data.dtype());
-                }
-                if field_data.len() != md.npoints {
-                    anyhow::bail!("Field '{}' length mismatch: expected {}, got {}", 
-                        field_name, md.npoints, field_data.len());
-                }
+                anyhow::ensure!(field_data.len() == md.npoints, "Field '{}' length does not match npoints", field_name);
+                anyhow::ensure!(field_data.dtype() == field_meta.dtype, "Field '{}' dtype does not match metadata", field_name);
             } else {
                 anyhow::bail!("Field '{}' exists in data but not in metadata", field_name);
             }
         }
-        Ok(true)
+        Ok(())
     }
 
     /// Return number of points in PointCloud

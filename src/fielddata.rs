@@ -1,5 +1,5 @@
 use num_traits::NumCast;
-use pyo3::{prelude::*, IntoPyObject, IntoPyObjectExt};
+use pyo3::{prelude::*, IntoPyObject, IntoPyObjectExt, exceptions::PyValueError};
 use ndarray::{Array1, Array2, s};
 use numpy::{PyArray2, PyArray3, Element};
 use crate::metadata::{Data, Dtype};
@@ -159,7 +159,9 @@ impl FieldData {
     }
 
     pub fn into_pyarray_shaped<'py, T: NumpyElement>(&self, py: Python<'py>, width: usize, height: usize) -> PyResult<Bound<'py, PyArray3<T>>> {
-        assert_eq!(self.npoints(), width * height, "Shape must match number of points");
+        if self.npoints() != width * height {
+            return Err(PyValueError::new_err("Shape must match number of points"));
+        }
 
         match self {
             FieldData::U8(arr) => Ok(PyArray3::from_array(py, &arr.mapv(|x| T::from(x).unwrap()).into_shape_with_order((width, height, self.count())).unwrap())),
