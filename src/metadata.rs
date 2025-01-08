@@ -100,6 +100,38 @@ impl Dtype {
             _ => panic!("Field type {} and size {} is not supported", t, s),
         }
     }
+
+    pub fn from_numpy_dtype(dtype: &str) -> Option<Self> {
+        match dtype {
+            "uint8" => Some(Dtype::U8),
+            "uint16" => Some(Dtype::U16),
+            "uint32" => Some(Dtype::U32),
+            "uint64" => Some(Dtype::U64),
+            "int8" => Some(Dtype::I8),
+            "int16" => Some(Dtype::I16),
+            "int32" => Some(Dtype::I32),
+            "int64" => Some(Dtype::I64),
+            "float32" => Some(Dtype::F32),
+            "float64" => Some(Dtype::F64),
+            _ => None,
+        }
+    }
+
+    pub fn as_numpy_dtype(&self) -> &'static str {
+        match self {
+            Dtype::U8 => "uint8",
+            Dtype::U16 => "uint16",
+            Dtype::U32 => "uint32",
+            Dtype::U64 => "uint64",
+            Dtype::I8 => "int8",
+            Dtype::I16 => "int16",
+            Dtype::I32 => "int32",
+            Dtype::I64 => "int64",
+            Dtype::F32 => "float32",
+            Dtype::F64 => "float64",
+        }
+    }
+
 }
 impl std::fmt::Display for Dtype {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
