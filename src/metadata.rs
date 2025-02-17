@@ -1,5 +1,5 @@
 use std::{iter::FromIterator, ops::{Index, IndexMut}};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Metadata {
@@ -12,24 +12,63 @@ pub struct Metadata {
     pub version: String,
 }
 
-pub type SharedMetadata = Arc<Mutex<Metadata>>;
+pub type SharedMetadata = Arc<RwLock<Metadata>>;
 
 impl Metadata {
-    pub fn new(names: Vec<String>, types: Vec<String>, sizes: Vec<usize>, counts: Option<Vec<usize>>, width: usize, height: usize, npoints: usize, viewpoint: Option<Vec<f32>>, encoding: Option<&str>, version: Option<&str>) -> Self {
+    /// Constructs a new `Metadata` from the provided parameters.
+    ///
+    /// # Parameters
+    /// - `names`: The names of the fields.
+    /// - `types`: The types of the fields as strings (e.g. "U", "I", "F").
+    /// - `sizes`: The size (in bytes) of each field type.
+    /// - `counts`: Optional field counts (defaulting to 1 for each field if not provided).
+    /// - `width`, `height`: Dimensions for organizing the point cloud.
+    /// - `npoints`: Total number of points.
+    /// - `viewpoint`: Optional viewpoint data.
+    /// - `encoding`: Optional encoding type (e.g. "binary_compressed").
+    /// - `version`: Optional version string (defaults to "0.7").
+    pub fn new(
+        names: Vec<String>,
+        types: Vec<String>,
+        sizes: Vec<usize>,
+        counts: Option<Vec<usize>>,
+        width: usize,
+        height: usize,
+        npoints: usize,
+        viewpoint: Option<Vec<f32>>,
+        encoding: Option<&str>,
+        version: Option<&str>,
+    ) -> Self {
         let fields = names.iter()
             .zip(types.iter().zip(sizes.iter()))
             .zip(counts.unwrap_or(vec![1; names.len()]).iter())
-            .map(|((name, (t, s)), c)| FieldMeta { name: name.to_string(), dtype: Dtype::from_type_size(t, s), count: *c })
+            .map(|((name, (t, s)), c)| {
+                FieldMeta {
+                    name: name.to_string(),
+                    dtype: Dtype::from_type_size(t, s),
+                    count: *c,
+                }
+            })
             .collect();
         let viewpoint = viewpoint.map(|vp| Viewpoint::from(vp)).unwrap_or_default();
         let encoding = Encoding::from_str(encoding.unwrap_or("binary_compressed")).unwrap();
-        Self { fields, width, height, npoints, viewpoint, encoding, version: version.unwrap_or("0.7").to_string() }
+        Self {
+            fields,
+            width,
+            height,
+            npoints,
+            viewpoint,
+            encoding,
+            version: version.unwrap_or("0.7").to_string(),
+        }
     }
 
+    /// Creates a new `Metadata` instance by cloning the contents of a shared metadata reference.
     pub fn from_shared(shared: SharedMetadata) -> Self {
-        shared.lock().unwrap().clone()
+        shared.read().unwrap().clone()
     }
 
+    /// Trims the metadata to the specified number of points.
     pub fn trim(&mut self, n: usize) {
         self.npoints = n;
 
@@ -54,6 +93,7 @@ impl Default for Metadata {
     }
 }
 
+/// Represents the data type of a field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Dtype {
     U8,
@@ -68,6 +108,7 @@ pub enum Dtype {
     F64,
 }
 impl Dtype {
+    /// Returns the size (in bytes) for this data type.
     pub fn get_size(&self) -> usize {
         match self {
             Dtype::U8 | Dtype::I8 => 1,
@@ -77,6 +118,7 @@ impl Dtype {
         }
     }
 
+    /// Returns the type as a string ("U" for unsigned, "I" for integer, "F" for float).
     pub fn get_type(&self) -> &str {
         match self {
             Dtype::U8 | Dtype::U16 | Dtype::U32 | Dtype::U64 => "U",
@@ -85,6 +127,7 @@ impl Dtype {
         }
     }
 
+    /// Constructs a `Dtype` from a type string and size.
     pub fn from_type_size(t: &str, s: &usize) -> Self {
         match (t, s) {
             ("U", 1) => Dtype::U8,
@@ -101,6 +144,7 @@ impl Dtype {
         }
     }
 
+    /// Returns a corresponding `Dtype` given a NumPy dtype name.
     pub fn from_numpy_dtype(dtype: &str) -> Option<Self> {
         match dtype {
             "uint8" => Some(Dtype::U8),
@@ -117,6 +161,7 @@ impl Dtype {
         }
     }
 
+    /// Returns the NumPy dtype string corresponding to this data type.
     pub fn as_numpy_dtype(&self) -> &'static str {
         match self {
             Dtype::U8 => "uint8",
@@ -139,6 +184,8 @@ impl std::fmt::Display for Dtype {
     }
 }
 
+/// A trait for data types that can be stored in fields.
+/// The trait requires that the type be copyable and also provides a static dtype.
 pub trait Data 
 where Self: Copy 
 {
@@ -155,6 +202,7 @@ impl Data for i64 { const DTYPE: Dtype = Dtype::I64; }
 impl Data for f32 { const DTYPE: Dtype = Dtype::F32; }
 impl Data for f64 { const DTYPE: Dtype = Dtype::F64; }
 
+/// Represents the viewpoint for the point cloud.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Viewpoint {
     pub tx: f32,
@@ -166,6 +214,7 @@ pub struct Viewpoint {
     pub qz: f32,
 }
 impl Viewpoint {
+    /// Constructs a new `Viewpoint` from a vector of 7 values.
     pub fn from(values: Vec<f32>) -> Self {
         assert_eq!(values.len(), 7, "Viewpoint must have 7 values, provided {} instead", values.len());
 
@@ -180,6 +229,7 @@ impl Viewpoint {
         }
     }
 
+    /// Returns the viewpoint as a vector of f32 values.
     pub fn to_vec(&self) -> Vec<f32> {
         vec![self.tx, self.ty, self.tz, self.qw, self.qx, self.qy, self.qz]
     }
@@ -199,10 +249,15 @@ impl Default for Viewpoint {
 }
 impl std::fmt::Display for Viewpoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "tx: {:.2}, ty: {:.2}, tz: {:.2}, qw: {:.2}, qx: {:.2}, qy: {:.2}, qz: {:.2}", self.tx, self.ty, self.tz, self.qw, self.qx, self.qy, self.qz)
+        write!(
+            f,
+            "tx: {:.2}, ty: {:.2}, tz: {:.2}, qw: {:.2}, qx: {:.2}, qy: {:.2}, qz: {:.2}",
+            self.tx, self.ty, self.tz, self.qw, self.qx, self.qy, self.qz
+        )
     }
 }
 
+/// Represents the encoding format of the point cloud data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Encoding {
     Ascii,
@@ -210,6 +265,7 @@ pub enum Encoding {
     BinaryCompressed,
 }
 impl Encoding {
+    /// Returns the encoding as a string.
     pub fn as_str(&self) -> &str {
         match self {
             Encoding::Ascii => "ascii",
@@ -218,6 +274,7 @@ impl Encoding {
         }
     }
 
+    /// Creates an `Encoding` from a string.
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "ascii" => Some(Encoding::Ascii),
@@ -233,6 +290,7 @@ impl Default for Encoding {
     }
 }
 
+/// Metadata about a single field in the point cloud.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldMeta {
     pub name: String,
@@ -249,21 +307,26 @@ impl FieldMeta {
     }
 }
 
+/// A schema representing a collection of field metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldSchema(pub Vec<FieldMeta>);
 impl FieldSchema {
+    /// Creates an empty `FieldSchema`.
     pub fn new() -> Self {
         Self(Vec::new())
     }
 
+    /// Returns true if the schema contains no fields.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// Returns the number of fields in the schema.
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Returns an iterator over the field metadata.
     pub fn iter(&self) -> std::slice::Iter<'_, FieldMeta> {
         self.0.iter()
     }
